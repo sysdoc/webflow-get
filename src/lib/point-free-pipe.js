@@ -3,11 +3,23 @@
 export const getProperty = (key) => (object) => object[key];
 
 
-export const equals = (b) => (a) => a === b;
-export const lt = (b) => (a) => a < b;
-export const lte = (b) => (a) => a <= b;
-export const gt = (b) => (a) => a > b;
-export const gte = (b) => (a) => a >= b;
+export const eq = (r) => (l) => l === r;
+export const lt = (r) => (l) => l < r;
+export const lte = (r) => (l) => l <= r;
+export const gt = (r) => (l) => l > r;
+export const gte = (r) => (l) => l >= r;
+
+export const isEq = (r) => (l) => l === r;
+export const isLt = (r) => (l) => l < r;
+export const isLtEq = (r) => (l) => l <= r;
+export const isGt = (r) => (l) => l > r;
+export const isGtEq = (r) => (l) => l >= r;
+
+export const checkIsEq = (r) => (l) => l === r;
+export const checkIsLt = (r) => (l) => l < r;
+export const checkIsLtEq = (r) => (l) => l <= r;
+export const checkIsGt = (r) => (l) => l > r;
+export const checkIsGtEq = (r) => (l) => l >= r;
 
 
 export function funnel(schema) {

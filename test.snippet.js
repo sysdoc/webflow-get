@@ -12,21 +12,3 @@ test.each([
   expect(false).toBe(true);
 });
 
-
-
-runTests(
-  "test",
-  [
-    {
-      given: {},
-      then: {},
-    },
-    {
-      given: { },
-      errorMessage: "",
-    },
-  ],
-  function (given) {
-    return {};
-  },
-);
