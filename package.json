@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --watchAll --verbose"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --watchAll --verbose --silent=false"
   },
   "repository": {
     "type": "git",

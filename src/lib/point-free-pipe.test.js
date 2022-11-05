@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { eq, gt, gte, lt, lte } from './point-free-pipe';
+import { captureMatches, eq, getProp, getProperty, gt, gte, lt, lte, map, pipe } from './point-free-pipe';
 
 describe("curried small utility functions", () => {
     test("eq", () => {
@@ -73,15 +73,54 @@ describe("pipe function", () => {
             },
         },
     ])("pipe", async ({ given, then }) => {
-        const pipe = (transforms) => async (value) => {
-            for (const transform of transforms) {
-                value = await transform(value);
-            }
-
-            return value;
-        }
-
         const result = await pipe(given.transforms)(given.value);
         then(result);
     });
 });
+
+const wrapIntoTest = (act) => async ({ given, assert }) => {
+    await pipe([
+        () => given,
+        act,
+        assert,
+    ])();
+};
+
+describe("fn captureMatches", () => {
+    test.each([
+        {
+            arrange: () => ({
+                string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
+                regex: /href="([^"]*)"/g,
+            }),
+            assert(result) {
+                expect(result).toEqual([`/about`, `/`]);
+            },
+        },
+        {
+            arrange: () => ({
+                string: undefined,
+                regex: /href="([^"]*)"/g,
+            }),
+            assert(result) {
+                expect(result).toEqual([]);
+            },
+        },
+        {
+            arrange: () => ({
+                string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
+                regex: undefined,
+            }),
+            assert(result) {
+                expect(result).toEqual([]);
+            },
+        },
+    ])("", async ({ arrange, assert }) => {
+        await pipe([
+            arrange,
+            (given) => captureMatches(given.regex)(given.string),
+            assert,
+        ])();
+    });
+});
+
