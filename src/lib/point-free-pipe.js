@@ -1,16 +1,33 @@
 
-/**
- * @param  {Array<(arg: any) => any>} transforms
- * @return {(arg: any) => any}
- */
-
-export const pipe = (transforms) => async (value) => {
+export const pipe = /** @type Pipe */ (transforms) => async (value = undefined) => {
     for (const transform of transforms) {
         value = await transform(value);
     }
 
     return value;
 }
+
+/**
+ * @typedef {void | undefined | boolean | number | string | Promise | {[x: string]: Value} | {[x: number]: Value}} Value
+ */
+
+/**
+ * @template {Value} [I=Value]
+ * @template {Value} [O=Value]
+ * @typedef {(value?: I) => O | Promise<O>} Transform
+ */
+
+/**
+ * @template {Value} [I=Value]
+ * @template {Value} [O=Value]
+ * @typedef {(transforms: Transform<I, O>[]) => Transform<I, O>} Pipe
+ */
+
+/** Other name ideas: patch, passTo, unary, constrain
+ * @template {Value} I
+ * @template {(value: I, ...values: any) => Value} T
+ */
+export const passTo = (/** @type T */ fn) => (/** @type I */ value) => fn(value);
 
 
 
@@ -22,104 +39,189 @@ export const pipe = (transforms) => async (value) => {
 // RULE: every data argument of a function should be optional
 
 
+
+export const unless_alt = (/** @type Transform[] */ testTransforms) => ({
+    then: (/** @type Transform[] */ transforms) => async (/** @type Value */ value = undefined) => {
+        if (!await pipe(testTransforms)(value)) {
+            return await pipe(transforms)(value);
+        }
+
+        return value;
+    },
+});
+
+
+
+
+export const if_ = (/** @type Transform[] */ testTransforms) => ({
+    /** @template {Value} T */
+    then: (/** @type Transform[] */ transforms) => async (/** @type T */ value = undefined) => {
+        if (await pipe(testTransforms)(value)) {
+            return await pipe(transforms)(value);
+        }
+
+        return value;
+    },
+});
+
+
+export const isArray = passTo(Array.isArray);
+export const isObject = (/** @type Value */ value) => typeof value === "object" && value !== null;
+export const isNumber = (/** @type Value */ value) => typeof value === "number";
+export const isString = (/** @type Value */ value) => typeof value === "string";
+export const isBoolean = (/** @type Value */ value) => typeof value === "boolean";
+export const isUndefined = (/** @type Value */ value) => typeof value === "undefined";
+
+export const assert = (/** @type Transform[] */ testTransforms) => unless_alt(testTransforms).then([
+    throwError("Type Error"),
+]);
+
+export const throwError = (/** @type String */ errorMessage) => () => { throw new Error(errorMessage) };
+
+/** @template {Value} T */
+export const use = (/** @type T */ value) => () => value;
+
+export const defaultTo = (/** @type Value */ defaultValue) => if_([isUndefined]).then([
+    use(defaultValue),
+]);
+
+export const isEq = (/** @type Value */ r) => (/** @type Value */ l) => l === r;
+
+export const isLt = (/** @type Number */ r) => if_([isNumber]).then([
+    (l) => l < r,
+]);
+
+export const isLtEq = (/** @type Number */ r) => if_([isNumber]).then([
+    (l) => l <= r,
+]);
+
+export const isGt = (/** @type Number */ r) => if_([isNumber]).then([
+    (l) => l > r,
+]);
+
+export const isGtEq = (/** @type Number */ r) => if_([isNumber]).then([
+    (l) => l >= r,
+]);
+
+
+
+export const not = if_([isBoolean]).then([
+    (bool) => !bool,
+]);
+
+export const not_ = (/** @type Transform[] */ transforms) => pipe([
+    ...transforms,
+    assert([isBoolean]),
+    (bool) => !bool,
+]);
+
 /**
- * @param {T} value 
- * @returns {() => T}
+ * @param {Array<(value?: any) => any>} transforms 
  */
-export const use = (value) => () => value;
-
-export const eq = (r) => (l) => l === r;
-export const lt = (r) => (l) => l < r;
-export const lte = (r) => (l) => l <= r;
-export const gt = (r) => (l) => l > r;
-export const gte = (r) => (l) => l >= r;
-
-const isEq = (r) => (l) => l === r;
-const isLt = (r) => (l) => l < r;
-const isLtEq = (r) => (l) => l <= r;
-const isGt = (r) => (l) => l > r;
-const isGtEq = (r) => (l) => l >= r;
-
-const assertEq = (r) => (l) => l === r;
-const assertLt = (r) => (l) => l < r;
-const assertLtEq = (r) => (l) => l <= r;
-const assertGt = (r) => (l) => l > r;
-const assertGtEq = (r) => (l) => l >= r;
-
-const checkIsEq = (r) => (l) => l === r;
-const checkIsLt = (r) => (l) => l < r;
-const checkIsLtEq = (r) => (l) => l <= r;
-const checkIsGt = (r) => (l) => l > r;
-const checkIsGtEq = (r) => (l) => l >= r;
+export const map = (transforms) => if_([isArray]).then([
+    callMethod("map").withArguments(pipe(transforms)),
+    // passTo(Promise.all),
+    (/** @type Array */ array) => Promise.all(array),
+]);
 
 
-export const map = (transform) => (array) => array.map(transform);
 
-export const getProp = (key) => (object) => object[key];
-export const getProperty = (key) => (object) => object[key];
+/**
+ * @param {Array<(value?: any) => any>} transforms 
+ */
+export const forEach = (/** @type Transform[] */ transforms) => if_([isArray]).then([
+    sideEffect([
+        callMethod("forEach").withArguments(pipe(transforms)),
+    ]),
+]);
 
-// TODO: not a verb
-export const startsWith = (subString) => (string) => string.startsWith(subString);
+
+export const getElement = (/** @type number */ index) => if_([isArray]).then([
+    (value) => value[index],
+]);
+
+export const getProp = (/** @type String */ propertyKey) => if_([isObject]).then([
+    (value) => value[propertyKey],
+]);
+
+export const getProperty = getProp;
+
+/**
+ * @param {string} methodName 
+ */
+export const callMethod = (methodName) => ({
+    withArguments: (...args) => if_([isObject]).then([
+        (value) => value[methodName](...args),
+    ]),
+});
 
 
-export const unless_ = (test) => (transforms) => (value) => {
-    if (!test(value)) {
-        return pipe(transforms)(value);
+
+export const startsWith = (/** @type String */ subString) => if_([isString]).then([
+    callMethod("startsWith").withArguments(subString),
+]);
+
+/**
+ * @param {Array<(value?: any) => any>} testTransforms 
+ */
+export const unless_ = (testTransforms) => (transforms) => async (value) => {
+    if (!await pipe(testTransforms)(value)) {
+        return await pipe(transforms)(value);
     }
 
     return value;
 }
 
-export const if_ = (test) => (transforms) => (value) => {
-    if (test(value)) {
-        return pipe(transforms)(value);
-    }
 
+// name ideas: sideEffect, branchOff, diverge, fork, effect
+export const sideEffect = (/** @type Transform[] */ transforms) => async (/** @type Value */ value = undefined) => {
+    await pipe(transforms)(value);
     return value;
 }
 
-/**
- * 
- * @param {Array} transforms 
- * @returns {(value: T) => T}
- */
-/* name ideas: branchOff, diverge, fork, effect, sideEffect */
-export const branchOff_ = (transforms) => (value) => {
-    pipe(transforms)(value);
-    return value;
-}
 
-export const log = branchOff_([
-    console.log,
+// name ideas: trace, dbg, log
+export const log = sideEffect([
+    (value) => console.log(`${JSON.stringify(value)}: ${value}`),
 ]);
 
 
 
 
 
-/**
- * 
- * @param {RegExp | undefined} regex 
- * @returns {(string: string | undefined) => Array<string>}
- */
-export const captureMatches = (regex) => pipe([
-    (string) => string ? string.matchAll(regex) : [],
-    Array.from,
-    map(getProperty(1)),
+export const captureMatches = (/** @type RegExp */ regex) => pipe([
+    defaultTo(""),
+    (/** @type String */ string) => Array.from(string.matchAll(regex)),
+    map([getElement(1)]),
 ]);
 
 
-
-
-
-export function funnel(schema) {
-    return function (value) {
-        return pipe([
-            () => schema,
-            Object.entries,
-            map(([k, transform]) => [k, transform(value)]),
-            Object.fromEntries,
-        ])();
-    };
+// name ideas: isFirstOccurance, isFirstInstance, haveNotSeenYet
+// name ideas: isRepetition, haveAlreadyEncountered, remember, isInMemory, isMemorised, isAlreadySeen
+const isFirstOccurance = () => {
+    const memorised = new Set();
+    return couldAddTo(memorised);
 }
+
+const couldAddTo = (/** @type Set */ set) => (/** @tyep Value */ value) => {
+    if (set.has(value)) {
+        return false;
+    }
+
+    set.add(value);
+    return true;
+}
+
+// name ideas: funnel, paralell, independently, waitForAll, 
+
+// export function funnel(schema) {
+//     return function (value) {
+//         return pipe([
+//             () => schema,
+//             Object.entries,
+//             map([([k, transform]) => [k, transform(value)]]),
+//             Object.fromEntries,
+//         ])();
+//     };
+// }
 

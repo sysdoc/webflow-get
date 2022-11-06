@@ -1,35 +1,35 @@
 import { describe, expect, test } from '@jest/globals';
-import { captureMatches, eq, getProp, getProperty, gt, gte, lt, lte, map, pipe } from './point-free-pipe';
+import { captureMatches, isEq, isGt, isGtEq, isLt, isLtEq, map, pipe, use, log } from './point-free-pipe';
 
 describe("curried small utility functions", () => {
-    test("eq", () => {
-        expect(eq(5)(5)).toBe(true);
-        expect(eq(5)(7)).toBe(false);
-        expect(eq({})({})).toBe(false);
+    test("eq", async () => {
+        expect(await isEq(5)(5)).toBe(true);
+        expect(await isEq(5)(7)).toBe(false);
+        expect(await isEq({})({})).toBe(false);
     });
 
-    test("lt", () => {
-        expect(lt(5)(3)).toBe(true);
-        expect(lt(5)(7)).toBe(false);
-        expect(lt(5)(5)).toBe(false);
+    test("lt", async () => {
+        expect(await isLt(5)(3)).toBe(true);
+        expect(await isLt(5)(7)).toBe(false);
+        expect(await isLt(5)(5)).toBe(false);
     });
 
-    test("lte", () => {
-        expect(lte(5)(3)).toBe(true);
-        expect(lte(5)(7)).toBe(false);
-        expect(lte(5)(5)).toBe(true);
+    test("lte", async () => {
+        expect(await isLtEq(5)(3)).toBe(true);
+        expect(await isLtEq(5)(7)).toBe(false);
+        expect(await isLtEq(5)(5)).toBe(true);
     });
 
-    test("gt", () => {
-        expect(gt(5)(3)).toBe(false);
-        expect(gt(5)(7)).toBe(true);
-        expect(gt(5)(5)).toBe(false);
+    test("gt", async () => {
+        expect(await isGt(5)(3)).toBe(false);
+        expect(await isGt(5)(7)).toBe(true);
+        expect(await isGt(5)(5)).toBe(false);
     });
 
-    test("gte", () => {
-        expect(gte(5)(3)).toBe(false);
-        expect(gte(5)(7)).toBe(true);
-        expect(gte(5)(5)).toBe(true);
+    test("gte", async () => {
+        expect(await isGtEq(5)(3)).toBe(false);
+        expect(await isGtEq(5)(7)).toBe(true);
+        expect(await isGtEq(5)(5)).toBe(true);
     });
 });
 
@@ -41,7 +41,7 @@ describe("pipe function", () => {
             given: {
                 value: 3,
                 transforms: [
-                    lt(5),
+                    isLt(5),
                 ],
             },
             then(result) {
@@ -52,8 +52,8 @@ describe("pipe function", () => {
             given: {
                 value: 3,
                 transforms: [
-                    lt(5),
-                    eq(true),
+                    isLt(5),
+                    isEq(true),
                 ],
             },
             then(result) {
@@ -64,8 +64,8 @@ describe("pipe function", () => {
             given: {
                 value: 3,
                 transforms: [
-                    async (value) => lt(5)(value),
-                    eq(true),
+                    async (value) => isLt(5)(value),
+                    isEq(true),
                 ],
             },
             then(result) {
@@ -78,18 +78,11 @@ describe("pipe function", () => {
     });
 });
 
-const wrapIntoTest = (act) => async ({ given, assert }) => {
-    await pipe([
-        () => given,
-        act,
-        assert,
-    ])();
-};
 
 describe("fn captureMatches", () => {
     test.each([
         {
-            arrange: () => ({
+            arrange: use({
                 string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
                 regex: /href="([^"]*)"/g,
             }),
@@ -98,7 +91,7 @@ describe("fn captureMatches", () => {
             },
         },
         {
-            arrange: () => ({
+            arrange: use({
                 string: undefined,
                 regex: /href="([^"]*)"/g,
             }),
@@ -107,7 +100,7 @@ describe("fn captureMatches", () => {
             },
         },
         {
-            arrange: () => ({
+            arrange: use({
                 string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
                 regex: undefined,
             }),
@@ -118,7 +111,7 @@ describe("fn captureMatches", () => {
     ])("", async ({ arrange, assert }) => {
         await pipe([
             arrange,
-            (given) => captureMatches(given.regex)(given.string),
+            (given) => captureMatches(given["regex"])(given["string"]),
             assert,
         ])();
     });
