@@ -1,11 +1,4 @@
-
-export const pipe = /** @type Pipe */ (transforms) => async (value = undefined) => {
-    for (const transform of transforms) {
-        value = await transform(value);
-    }
-
-    return value;
-}
+import { array_, boolean_, object_, pipe, string_, undefined_ } from "./core";
 
 /**
  * @typedef {void | undefined | boolean | number | string | Promise | {[x: string]: Value} | {[x: number]: Value}} Value
@@ -23,7 +16,7 @@ export const pipe = /** @type Pipe */ (transforms) => async (value = undefined) 
  * @typedef {(transforms: Transform<I, O>[]) => Transform<I, O>} Pipe
  */
 
-/** Other name ideas: patch, passTo, unary, constrain
+/** Name ideas: patch, passTo, unary, constrain
  * @template {Value} I
  * @template {(value: I, ...values: any) => Value} T
  */
@@ -53,7 +46,7 @@ export const unless_alt = (/** @type Transform[] */ testTransforms) => ({
 
 
 
-export const if_ = (/** @type Transform[] */ testTransforms) => ({
+export const if___ = (/** @type Transform[] */ testTransforms) => ({
     /** @template {Value} T */
     then: (/** @type Transform[] */ transforms) => async (/** @type T */ value = undefined) => {
         if (await pipe(testTransforms)(value)) {
@@ -65,60 +58,28 @@ export const if_ = (/** @type Transform[] */ testTransforms) => ({
 });
 
 
-export const isArray = passTo(Array.isArray);
-export const isObject = (/** @type Value */ value) => typeof value === "object" && value !== null;
-export const isNumber = (/** @type Value */ value) => typeof value === "number";
-export const isString = (/** @type Value */ value) => typeof value === "string";
-export const isBoolean = (/** @type Value */ value) => typeof value === "boolean";
-export const isUndefined = (/** @type Value */ value) => typeof value === "undefined";
+/**
+ * Name ideas: useValue, use, continueWith, newValue
+ * @template {Value} T 
+ */
+export const useValue = (/** @type T */ value) => () => value;
 
-export const assert = (/** @type Transform[] */ testTransforms) => unless_alt(testTransforms).then([
-    throwError("Type Error"),
-]);
 
-export const throwError = (/** @type String */ errorMessage) => () => { throw new Error(errorMessage) };
 
-/** @template {Value} T */
-export const use = (/** @type T */ value) => () => value;
-
-export const defaultTo = (/** @type Value */ defaultValue) => if_([isUndefined]).then([
-    use(defaultValue),
-]);
-
-export const isEq = (/** @type Value */ r) => (/** @type Value */ l) => l === r;
-
-export const isLt = (/** @type Number */ r) => if_([isNumber]).then([
-    (l) => l < r,
-]);
-
-export const isLtEq = (/** @type Number */ r) => if_([isNumber]).then([
-    (l) => l <= r,
-]);
-
-export const isGt = (/** @type Number */ r) => if_([isNumber]).then([
-    (l) => l > r,
-]);
-
-export const isGtEq = (/** @type Number */ r) => if_([isNumber]).then([
-    (l) => l >= r,
+export const defaultTo = (/** @type Value */ defaultValue) => if___([undefined_]).then([
+    useValue(defaultValue),
 ]);
 
 
 
-export const not = if_([isBoolean]).then([
-    (bool) => !bool,
-]);
-
-export const not_ = (/** @type Transform[] */ transforms) => pipe([
-    ...transforms,
-    assert([isBoolean]),
+export const not = if___([boolean_]).then([
     (bool) => !bool,
 ]);
 
 /**
  * @param {Array<(value?: any) => any>} transforms 
  */
-export const map = (transforms) => if_([isArray]).then([
+export const map = (transforms) => if___([array_]).then([
     callMethod("map").withArguments(pipe(transforms)),
     // passTo(Promise.all),
     (/** @type Array */ array) => Promise.all(array),
@@ -129,18 +90,18 @@ export const map = (transforms) => if_([isArray]).then([
 /**
  * @param {Array<(value?: any) => any>} transforms 
  */
-export const forEach = (/** @type Transform[] */ transforms) => if_([isArray]).then([
+export const forEach = (/** @type Transform[] */ transforms) => if___([array_]).then([
     sideEffect([
         callMethod("forEach").withArguments(pipe(transforms)),
     ]),
 ]);
 
 
-export const getElement = (/** @type number */ index) => if_([isArray]).then([
+export const getElement = (/** @type number */ index) => if___([array_]).then([
     (value) => value[index],
 ]);
 
-export const getProp = (/** @type String */ propertyKey) => if_([isObject]).then([
+export const getProp = (/** @type String */ propertyKey) => if___([object_]).then([
     (value) => value[propertyKey],
 ]);
 
@@ -150,14 +111,14 @@ export const getProperty = getProp;
  * @param {string} methodName 
  */
 export const callMethod = (methodName) => ({
-    withArguments: (...args) => if_([isObject]).then([
+    withArguments: (...args) => if___([object_]).then([
         (value) => value[methodName](...args),
     ]),
 });
 
 
 
-export const startsWith = (/** @type String */ subString) => if_([isString]).then([
+export const startsWith = (/** @type String */ subString) => if___([string_]).then([
     callMethod("startsWith").withArguments(subString),
 ]);
 
@@ -172,12 +133,6 @@ export const unless_ = (testTransforms) => (transforms) => async (value) => {
     return value;
 }
 
-
-// name ideas: sideEffect, branchOff, diverge, fork, effect
-export const sideEffect = (/** @type Transform[] */ transforms) => async (/** @type Value */ value = undefined) => {
-    await pipe(transforms)(value);
-    return value;
-}
 
 
 // name ideas: trace, dbg, log

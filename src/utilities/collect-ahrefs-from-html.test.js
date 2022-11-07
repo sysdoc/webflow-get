@@ -1,6 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 import http from 'http';
-import { captureMatches, pipe, startsWith, unless_, use, map, if_, not, sideEffect as sideEffect, forEach } from '../lib/point-free-pipe';
+import { pipe } from '../lib/core';
+import { captureMatches, startsWith, unless_, map, not, sideEffect as sideEffect, forEach, useValue } from '../lib/point-free-pipe';
 import { collectAHrefs, fetchTextContent, resolveUrlAgainst } from './collect-ahrefs-from-html';
 
 const expectToBe = (result) => expect(result).toBe;
@@ -42,56 +43,56 @@ describe("fn collectAHrefs", () => {
 describe("fn resolveUrl", () => {
     test.each([
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com`,
                 AHref: `https://my-domain.com/about`,
             }),
             assert: expectToBe(`https://my-domain.com/about`),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com`,
                 AHref: `https://other-domain.com/`,
             }),
             assert: expectToBe(`https://other-domain.com/`),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com`,
                 AHref: `https://other-domain.com`,
             }),
             assert: expectToBe(`https://other-domain.com/`),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com`,
                 AHref: `/`,
             }),
             assert: expectToBe(`https://my-domain.com/`),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com`,
                 AHref: `about`,
             }),
             assert: expectToBe(`https://my-domain.com/about`),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com/blog`,
                 AHref: `about`,
             }),
             assert: expectToBe(`https://my-domain.com/about`),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: undefined,
                 AHref: `https://my-domain.com/blog`,
             }),
             assert: expectToBe(undefined),
         },
         {
-            arrange: use({
+            arrange: useValue({
                 pageUrl: `https://my-domain.com/blog`,
                 AHref: undefined,
             }),
@@ -148,13 +149,13 @@ describe("fn fetchTextContent", () => {
     beforeAll(localServer.listen);
 
     test("", async () => await pipe([
-        use(`http://localhost:8080`),
+        useValue(`http://localhost:8080`),
         fetchTextContent,
         expectToBe(`href="/about" href="/404"`),
     ])());
 
     test("", async () => await pipe([
-        use(`http://localhost:8080/404`),
+        useValue(`http://localhost:8080/404`),
         fetchTextContent,
         expectToBe(undefined),
     ])());
@@ -169,7 +170,7 @@ describe("fn fetchTextContent", () => {
 //     beforeAll(localServer.listen);
 
 //     test("", async () => await pipe([
-//         use([`http://localhost:8081`]),
+//         useValue([`http://localhost:8081`]),
 //         // guardInput(checkIfUniquie),
 //         // (function loop(previousValues) {
 //         //     return if_([previousValues.has, not]).then([

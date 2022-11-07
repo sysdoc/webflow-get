@@ -1,35 +1,36 @@
 import { describe, expect, test } from '@jest/globals';
-import { captureMatches, isEq, isGt, isGtEq, isLt, isLtEq, map, pipe, use, log } from './point-free-pipe';
+import { eq_, gte_, gt_, lte_, lt_, pipe } from './core';
+import { captureMatches, map, useValue, log } from './point-free-pipe';
 
 describe("curried small utility functions", () => {
     test("eq", async () => {
-        expect(await isEq(5)(5)).toBe(true);
-        expect(await isEq(5)(7)).toBe(false);
-        expect(await isEq({})({})).toBe(false);
+        expect(await eq_(5)(5)).toBe(true);
+        expect(await eq_(5)(7)).toBe(false);
+        expect(await eq_({})({})).toBe(false);
     });
 
     test("lt", async () => {
-        expect(await isLt(5)(3)).toBe(true);
-        expect(await isLt(5)(7)).toBe(false);
-        expect(await isLt(5)(5)).toBe(false);
+        expect(await lt_(5)(3)).toBe(true);
+        expect(await lt_(5)(7)).toBe(false);
+        expect(await lt_(5)(5)).toBe(false);
     });
 
     test("lte", async () => {
-        expect(await isLtEq(5)(3)).toBe(true);
-        expect(await isLtEq(5)(7)).toBe(false);
-        expect(await isLtEq(5)(5)).toBe(true);
+        expect(await lte_(5)(3)).toBe(true);
+        expect(await lte_(5)(7)).toBe(false);
+        expect(await lte_(5)(5)).toBe(true);
     });
 
     test("gt", async () => {
-        expect(await isGt(5)(3)).toBe(false);
-        expect(await isGt(5)(7)).toBe(true);
-        expect(await isGt(5)(5)).toBe(false);
+        expect(await gt_(5)(3)).toBe(false);
+        expect(await gt_(5)(7)).toBe(true);
+        expect(await gt_(5)(5)).toBe(false);
     });
 
     test("gte", async () => {
-        expect(await isGtEq(5)(3)).toBe(false);
-        expect(await isGtEq(5)(7)).toBe(true);
-        expect(await isGtEq(5)(5)).toBe(true);
+        expect(await gte_(5)(3)).toBe(false);
+        expect(await gte_(5)(7)).toBe(true);
+        expect(await gte_(5)(5)).toBe(true);
     });
 });
 
@@ -41,7 +42,7 @@ describe("pipe function", () => {
             given: {
                 value: 3,
                 transforms: [
-                    isLt(5),
+                    lt_(5),
                 ],
             },
             then(result) {
@@ -52,8 +53,8 @@ describe("pipe function", () => {
             given: {
                 value: 3,
                 transforms: [
-                    isLt(5),
-                    isEq(true),
+                    lt_(5),
+                    eq_(true),
                 ],
             },
             then(result) {
@@ -64,8 +65,8 @@ describe("pipe function", () => {
             given: {
                 value: 3,
                 transforms: [
-                    async (value) => isLt(5)(value),
-                    isEq(true),
+                    async (value) => lt_(5)(value),
+                    eq_(true),
                 ],
             },
             then(result) {
@@ -82,7 +83,7 @@ describe("pipe function", () => {
 describe("fn captureMatches", () => {
     test.each([
         {
-            arrange: use({
+            arrange: useValue({
                 string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
                 regex: /href="([^"]*)"/g,
             }),
@@ -91,7 +92,7 @@ describe("fn captureMatches", () => {
             },
         },
         {
-            arrange: use({
+            arrange: useValue({
                 string: undefined,
                 regex: /href="([^"]*)"/g,
             }),
@@ -100,7 +101,7 @@ describe("fn captureMatches", () => {
             },
         },
         {
-            arrange: use({
+            arrange: useValue({
                 string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
                 regex: undefined,
             }),

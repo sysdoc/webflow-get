@@ -1,5 +1,6 @@
 import fetch from "node-fetch";
-import { captureMatches, getProp, log, pipe, use, callMethod, isGtEq, unless_, if_, unless_alt, passTo, isString} from "../lib/point-free-pipe";
+import { string_ } from "../lib/core";
+import { captureMatches, getProp, log, useValue, callMethod, unless_, if___, unless_alt, passTo} from "../lib/point-free-pipe";
 
 
 
@@ -14,10 +15,10 @@ export const collectAHrefs = captureMatches(/href=['"]([^'"]*)['"]/g);
 export const resolveUrlAgainst = (baseUrl) => (url) => baseUrl && url && (new URL(url, baseUrl)).toString();
 
 
-export const fetchTextContent = if_([isString]).then([
+export const fetchTextContent = if___([string_]).then([
     (/** @type String */ str) => fetch(str),
     unless_alt([getProp("ok")]).then([
-        use(undefined),
+        useValue(undefined),
     ]),
     callMethod("text").withArguments(),
 ]);
