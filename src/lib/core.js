@@ -1,3 +1,4 @@
+import { pipe_ } from "./pipe";
 
 
 export const pipe = (transforms) => async (value = undefined) => {
@@ -8,7 +9,7 @@ export const pipe = (transforms) => async (value = undefined) => {
     return value;
 }
 
-
+export const function_ = pipe_;
 
 export const if_ = (predicateList, trueTransformList, falseTransformList = []) => (value) => {
     return value;
@@ -21,6 +22,8 @@ export const sideEffect = (transform) => async (value) => {
     return value;
 }
 
+
+export const tuple_ = (transforms) => (value) => transforms.map((transform) => transform(value));
 
 
 export const throwError = (/** @type String */ errorMessage) => () => { throw new Error(errorMessage) };
@@ -41,13 +44,24 @@ export const string_ = (/** @type Value */ value) => typeof value === "string";
 export const boolean_ = (/** @type Value */ value) => typeof value === "boolean";
 export const undefined_ = (/** @type Value */ value) => typeof value === "undefined";
 
+export const isArray = Array.isArray;
+export const isObject = (/** @type Value */ value) => typeof value === "object" && value !== null;
+export const isNumber = (/** @type Value */ value) => typeof value === "number";
+export const isString = (/** @type Value */ value) => typeof value === "string";
+export const isBoolean = (/** @type Value */ value) => typeof value === "boolean";
+export const isUndefined = (/** @type Value */ value) => typeof value === "undefined";
+export const isUndef = isUndefined;
 
 
 export const value_ = (value) => () => value;
+export const setValue = (value) => () => value;
 export const replaceValueTo = value_;
 export const replaceValueWith = value_;
 export const replaceTo = value_;
 export const replaceWith = value_;
+
+export const getValue = (value) => value;
+
 
 
 export const not_ = (/** @type Transform[] */ predicateList) => pipe([

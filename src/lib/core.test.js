@@ -1,18 +1,47 @@
 import { describe, expect, test } from '@jest/globals';
-import { if_, lt_, not_, pipe, replaceWith, sideEffect, value_ } from './core';
+import { function_, getValue, if_, lt_, not_, pipe, replaceWith, setValue, sideEffect, value_ } from './core';
 import { nullary_ } from './macros';
+import { isFalse, isGtEq, isLt, prop } from './std';
+import { expectToBe, testCase_ } from './test-helpers';
 
-describe("if expression", () => {
+describe("macro if_", () => {
 
-    test("", async () => await pipe([
-        value_(3),
-        if_([not_([lt_(5)])], [
-            value_("smaller"),
-        ], [
-            value_("larger"),
-        ]),
-        (value) => expect(value).toBe(),
-    ])());
+    testCase_([
+        setValue(3),
+        if_([isGtEq(5)], {
+            then: [setValue("larger")],
+            else: [setValue("smaller")],
+        }),
+        expectToBe("smaller"),
+    ]);
+
+    testCase_([
+        setValue({}),
+        if_([prop("ok"), isFalse], {
+            then: [
+                setValue(undefined),
+            ],
+            else: [
+                setValue({}),
+            ],
+        }),
+    ]);
+
+    testCase_([
+        setValue({}),
+        if_([prop("ok"), isFalse], {
+            then: [setValue(undefined)],
+            else: [setValue({})],
+        }),
+    ]);
+
+    testCase_([
+        setValue({}),
+        if_([prop("ok"), isFalse], {
+            then: [setValue(undefined)],
+        }),
+        expectToBe(undefined),
+    ]);
 
 });
 
@@ -21,5 +50,5 @@ describe("macro sideEffect", () => {
         replaceWith(42),
         sideEffect(replaceWith(245)),
         (val) => expect(val).toBe(42),
-    ])));
+    ]);
 });
