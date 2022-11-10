@@ -2,7 +2,7 @@ const OUTPUT_FOLDER = "public";
 
 function sitemapXmlFromUrls(fullUrls) {
   const date = new Date();
-  const dateStr = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  const dateStr = date.toISOString();
 
   return (
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -16,4 +16,3 @@ function sitemapXmlFromUrls(fullUrls) {
     `</urlset>`
   );
 }
-
