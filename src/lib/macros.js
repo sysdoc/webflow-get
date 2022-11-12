@@ -60,10 +60,11 @@ export const assert_ = (predicate) => {
 
 
 
-export const wrap_ = (object) => (value) => {
+export const merge_ = (object) => (value) => {
     return {};
 }
 
+export const wrap_ = merge_;
 
 
 export const sideEffect_ = (transformations) => (value) => {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
-import { eq_, gte_, gt_, lte_, lt_, pipe } from './core';
+import { eq_, gte_, gt_, lte_, lt_, pipe, setValue } from './core';
 import { captureMatches, map, useValue, log } from './point-free-pipe';
+import { expectToBe } from './test-helpers';
 
 describe("curried small utility functions", () => {
     test("eq", async () => {
@@ -114,6 +115,42 @@ describe("fn captureMatches", () => {
             arrange,
             (given) => captureMatches(given["regex"])(given["string"]),
             assert,
+        ])();
+    });
+});
+
+
+
+describe("fn captureMatches", () => {
+    test.each([
+        {
+            given: {
+                string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
+                regex: /href="([^"]*)"/g,
+            },
+            expected: [`/about`, `/`],
+        },
+
+        {
+            given: {
+                string: undefined,
+                regex: /href="([^"]*)"/g,
+            },
+            expected: [],
+        },
+
+        {
+            given: {
+                string: `<a href="/about">About Us</a> <a href="/">Home</a>`,
+                regex: undefined,
+            },
+            expected: [],
+        },
+    ])("", async ({ given, expected }) => {
+        await pipe([
+            setValue(given),
+            (given) => captureMatches(given["regex"])(given["string"]),
+            expectToBe(expected),
         ])();
     });
 });
