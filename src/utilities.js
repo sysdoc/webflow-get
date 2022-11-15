@@ -200,9 +200,12 @@ export async function updateSnapshot() {
     return fileUri;
   });
 
-  const urls = [...urlsSet.values()];
+  const webflowUrls = [...urlsSet.values()];
+  const productionUrls = webflowUrls.map(
+    (url) => url.replace(config.webflowSiteBaseUrl, config.productionSiteBaseUrl)
+  );
 
-  const sitemapXml = sitemapXmlFromUrls(urls);
+  const sitemapXml = sitemapXmlFromUrls(productionUrls);
   await storeTextContentIntoFile(sitemapXml, "public/sitemap.xml");
   await storeTextContentIntoFile(robotsTxt, "public/robots.txt");
 };

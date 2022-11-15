@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import { updateSnapshot } from './utilities';
 
 
-jest.setTimeout(60_000);
+jest.setTimeout(120_000);
 
 
 describe("updateSnapshot", () => {
@@ -18,7 +18,7 @@ describe("updateSnapshot", () => {
   test.each([
     {
       async then() {
-        const storedHtml = (await fs.readFile("test/updateSnapshot/index.html")).toString();
+        const storedHtml = (await fs.readFile("public/index.html")).toString();
         expect(storedHtml).toBeTruthy();
       },
     },
