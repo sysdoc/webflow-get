@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import { getProperty, pipe, if_, equals_ } from "./lib/continuation-passing.js";
-import { crawlUrlsUsing, readFileContent as getFileUriContent, getLocalSnapshotDate, htmlFromFullUrl, storeTextContentIntoFile, webflowPublishedDateFrom, updateSnapshot } from "./utilities";
+import { crawlUrlsUsing, readFileContent as getFileUriContent, getLocalSnapshotDate, htmlFromFullUrl, storeTextContentIntoFile, webflowPublishedDateFrom, updateSnapshot } from "./utilities.js";
 
 
 const getWebUrlContent = htmlFromFullUrl;
