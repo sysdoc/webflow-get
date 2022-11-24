@@ -1,5 +1,5 @@
 import fs from "fs/promises";
-import { getProperty, pipe, if_, equals_ } from "./lib/continuation-passing";
+import { getProperty, pipe, if_, equals_ } from "./lib/continuation-passing.js";
 import { crawlUrlsUsing, readFileContent as getFileUriContent, getLocalSnapshotDate, htmlFromFullUrl, storeTextContentIntoFile, webflowPublishedDateFrom, updateSnapshot } from "./utilities";
 
 
@@ -13,7 +13,7 @@ const softUpdateSnapshot = async function () {
     }
 
     await updateSnapshot();
-}
+};
 
 
 
@@ -34,9 +34,9 @@ async function main() {
 
 main()
     .then(() => {
-        console.log('Executed successfully')
+        console.log('Executed successfully');
     })
     .catch((error) => {
-        console.error(error)
-        core.setFailed(error.message)
-    })
+        console.error(error);
+        core.setFailed(error.message);
+    });
