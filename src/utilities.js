@@ -39,6 +39,7 @@ export async function crawlUrlsUsing(knownUrls, htmlFromUrl, urlsFromHtml, callb
     const html = await htmlFromUrl(knownUrl);
 
     if (html === undefined) {
+      knownUrlsSet.delete(knownUrl);
       continue;
     }
 
@@ -110,7 +111,7 @@ export async function storeTextContentIntoFile(textContent, fileUri) {
     try {
       await fs.access(folderToCheck);
     } catch (error) {
-      await fs.mkdir(folderToCheck)
+      await fs.mkdir(folderToCheck);
     }
   }
 
@@ -122,9 +123,11 @@ export async function storeTextContentIntoFile(textContent, fileUri) {
 export async function htmlFromFullUrl(absoluteUrl) {
   const response = await fetch(absoluteUrl);
 
-  if (!response.ok) {
-    console.error(`${response.status}: ${response.statusText} ${absoluteUrl}`);
+  if (!response.ok && !response.redirected) {
+    // console.error(`${response.status}: ${response.statusText} ${absoluteUrl}`);
+    return undefined;
   }
+
 
   return response.text();
 }
@@ -147,7 +150,7 @@ export async function pageFromUrl(url) {
 
 export async function existsFile(fileUri) {
   try {
-    await fs.access(fileUri)
+    await fs.access(fileUri);
     return true;
   } catch (error) {
     return false;
@@ -166,11 +169,11 @@ export async function readFileContent(fileUri) {
 
 export async function getLocalSnapshotDate(fileUri) {
   if (!(await existsFile(fileUri))) {
-    return '1970-01-01T00:00:00Z'
+    return '1970-01-01T00:00:00Z';
   }
 
   const timestamp = (await fs.readFile(fileUri)).toString();
-  return timestamp.trim()
+  return timestamp.trim();
 }
 
 
