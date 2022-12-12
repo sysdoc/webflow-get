@@ -149,7 +149,7 @@ describe("crawlUrlsUsing", function () {
         htmlFromFullUrl: htmlFromFullUrlFactory(new Map()),
       },
       expected: {
-        urls: new Set(["/", "/page-1"]),
+        urls: new Set(),
       },
     },
     {
@@ -159,7 +159,7 @@ describe("crawlUrlsUsing", function () {
         htmlFromFullUrl: htmlFromFullUrlFactory(new Map([["/", `href="/contact"`]])),
       },
       expected: {
-        urls: new Set(["/", "/contact"]),
+        urls: new Set(["/"]),
       },
     },
   ])(`crawlUrlsUsing`, async function ({ given, expected }) {
@@ -345,7 +345,7 @@ describe("shouldCreateSnapshotUsing", function () {
   function getPublishedDateFromUrlFactory(publishedDateFromHtml, htmlFromFullUrl) {
     return function getPublishedDateFromUrl(url) {
       return publishedDateFromHtml(htmlFromFullUrl(url));
-    }
+    };
   }
 
   function getLocalSnapshotDate() {
@@ -419,7 +419,7 @@ describe("storePageHtml", function () {
     // 3 Then
     expect(storedHtml).toBe(given.html);
   });
-})
+});
 
 
 

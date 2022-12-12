@@ -39,6 +39,7 @@ export async function crawlUrlsUsing(knownUrls, htmlFromUrl, urlsFromHtml, callb
     const html = await htmlFromUrl(knownUrl);
 
     if (html === undefined) {
+      knownUrlsSet.delete(knownUrl);
       continue;
     }
 
@@ -122,8 +123,9 @@ export async function storeTextContentIntoFile(textContent, fileUri) {
 export async function htmlFromFullUrl(absoluteUrl) {
   const response = await fetch(absoluteUrl);
 
-  if (!response.ok) {
-    console.error(`${response.status}: ${response.statusText} ${absoluteUrl}`);
+  if (!response.ok && !response.redirected) {
+    // console.error(`${response.status}: ${response.statusText} ${absoluteUrl}`);
+    return undefined;
   }
 
   return response.text();
@@ -178,7 +180,9 @@ export async function getLocalSnapshotDate(fileUri) {
 export async function getAndStoreHtmlFrom(absoluteUrl) {
   const hostname = "https://travlrd.com";
   const html = await htmlFromFullUrl(hostname + absoluteUrl);
-  await storePageHtml(OUTPUT_FOLDER, absoluteUrl, html);
+  if (html) {
+    await storePageHtml(OUTPUT_FOLDER, absoluteUrl, html);
+  }
   return html;
 }
 
