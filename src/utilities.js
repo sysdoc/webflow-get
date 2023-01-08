@@ -187,8 +187,10 @@ export async function getAndStoreHtmlFrom(absoluteUrl) {
 }
 
 export async function snapshotFullWebsite(outputFolderName, entryUrls) {
+  fs.rm(`public`, { recursive: true });
   await crawlUrlsUsing(entryUrls, htmlFromFullUrl, fullUrlsFromHtml, async function (page) {
-    const fileUri = [outputFolderName, (new URL(page.url)).pathname.replace(/^\/+/, ''), `index.html`].filter(segment => segment).join("/");
+    const pathname = (new URL(page.url)).pathname;
+    const fileUri = outputFolderName + (pathname === "/" ? "/index.html" : `${pathname}.html`);
     await storeTextContentIntoFile(page.html, fileUri);
     return fileUri;
   });
@@ -199,7 +201,8 @@ export async function updateSnapshot() {
   const entryUrls = config.entryPaths.map(path => config.webflowSiteBaseUrl + path);
 
   const urlsSet = await crawlUrlsUsing(entryUrls, htmlFromFullUrl, fullUrlsFromHtml, async function (page) {
-    const fileUri = [config.outputFolderUri, (new URL(page.url)).pathname.replace(/^\/+/, ''), `index.html`].filter(segment => segment).join("/");
+    const pathname = (new URL(page.url)).pathname;
+    const fileUri = config.outputFolderUri + (pathname === "/" ? "/index.html" : `${pathname}.html`);
     await storeTextContentIntoFile(page.html, fileUri);
     return fileUri;
   });
