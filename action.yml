@@ -1,0 +1,10 @@
+name: "Webflow Get"
+description: "Fetch a Webflow site content"
+author: "Jarek Lipski"
+branding:
+  icon: "globe"
+  color: "blue"
+
+runs:
+  using: "node16"
+  main: "src/index.js"

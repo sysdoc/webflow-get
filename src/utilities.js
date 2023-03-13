@@ -1,10 +1,37 @@
 import fs from "node:fs/promises";
 import fetch from 'node-fetch';
+import { pipe } from "./lib/continuation-passing.js";
 
-// const { default: config } = await import("./config.json", { assert: { type: "json" } });
 export const config = JSON.parse(await fs.readFile("config.json"));
 
+// async function getConfig() {
+//   if (config) {
+//     return config;
+//   }
 
+//   return await pipe([
+//     () => ("config.json"),
+//     fs.readFile,
+//     JSON.parse,
+//     function (value) {
+//       config = value;
+//     }
+//   ])();
+// } 
+
+export function createPageFromUrlAndHtml(url, html) {
+  return {
+    url,
+    html,
+  };
+}
+
+/**
+ * @param  {Array<string>} knownUrls
+ * @param  {Function} htmlFromUrl
+ * @param  {Function} urlsFromHtml
+ * @param  {Function} callbackWithPage
+ */
 export async function crawlUrlsUsing(knownUrls, htmlFromUrl, urlsFromHtml, callbackWithPage) {
   const knownUrlsSet = new Set(knownUrls);
 
@@ -34,11 +61,43 @@ export async function crawlUrlsUsing(knownUrls, htmlFromUrl, urlsFromHtml, callb
 
 
 
+export function absoluteUrlsFromHtml(htmlCode) {
+  return new Set([...htmlCode.matchAll(/href=['"](\/[^'"]*)['"]/g)].map((match => match[1])));
+}
+
+
 
 export function fullUrlsFromHtml(htmlCode) {
   return new Set([...htmlCode.matchAll(/href=['"](\/[^'"]*)['"]/g)].map((match => config["webflowSiteBaseUrl"] + match[1])));
 }
 
+
+
+export function webflowPublishedDateFrom(html) {
+  const match = html.match(/<!-- Last Published: ([^-]+) \(Coordinated Universal Time\) -->/);
+
+  if (match === null) {
+    throw Error("Webflow timestamp not found");
+  }
+
+  return new Date(match[1]);
+}
+
+
+
+export function shouldCreateSnapshotUsing(getPublishedDateFromUrl, getLocalSnapshotDate) {
+  return getPublishedDateFromUrl("/") > getLocalSnapshotDate();
+}
+
+
+
+export async function storePageHtml(outputFolderName, absolutePath, html) {
+  const fileUri = [outputFolderName, absolutePath.replace(/\/+$/, '').replace(/^\/+/, ''), `index.html`].filter(segment => segment).join("/");
+
+  await storeTextContentIntoFile(html, fileUri);
+
+  return fileUri;
+}
 
 
 
@@ -74,6 +133,69 @@ export async function htmlFromFullUrl(absoluteUrl) {
 
 
 
+export async function pageFromUrl(url) {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
+
+  const html = response.text();
+
+  return { url, html };
+}
+
+
+
+export async function existsFile(fileUri) {
+  try {
+    await fs.access(fileUri);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+
+export async function readFileContent(fileUri) {
+  if (!(await existsFile(fileUri))) {
+    return undefined;
+  }
+
+  await fs.readFile(fileUri);
+}
+
+
+export async function getLocalSnapshotDate(fileUri) {
+  if (!(await existsFile(fileUri))) {
+    return '1970-01-01T00:00:00Z';
+  }
+
+  const timestamp = (await fs.readFile(fileUri)).toString();
+  return timestamp.trim();
+}
+
+
+
+export async function getAndStoreHtmlFrom(absoluteUrl) {
+  const hostname = "https://travlrd.com";
+  const html = await htmlFromFullUrl(hostname + absoluteUrl);
+  if (html) {
+    await storePageHtml(OUTPUT_FOLDER, absoluteUrl, html);
+  }
+  return html;
+}
+
+export async function snapshotFullWebsite(outputFolderName, entryUrls) {
+  fs.rm(`public`, { recursive: true });
+  await crawlUrlsUsing(entryUrls, htmlFromFullUrl, fullUrlsFromHtml, async function (page) {
+    const pathname = (new URL(page.url)).pathname;
+    const fileUri = outputFolderName + (pathname === "/" ? "/index.html" : `${pathname}.html`);
+    await storeTextContentIntoFile(page.html, fileUri);
+    return fileUri;
+  });
+}
+
 
 export async function updateSnapshot() {
   const entryUrls = config.entryPaths.map(path => config.webflowSiteBaseUrl + path);
@@ -94,8 +216,6 @@ export async function updateSnapshot() {
   await storeTextContentIntoFile(sitemapXml, "public/sitemap.xml");
   await storeTextContentIntoFile(robotsTxt, "public/robots.txt");
 };
-
-
 
 function sitemapXmlFromUrls(fullUrls) {
   const date = new Date();
