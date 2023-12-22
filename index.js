@@ -67,7 +67,7 @@ async function processSite(config) {
     let index = await fetchPage(site)
     const timestamp = getTimestampFromHTML(index)
 
-    if (timestamp <= lastTimestamp) {
+    if (!config.force && timestamp <= lastTimestamp) {
         console.log('No changes since last run, skipping')
         return
     }
