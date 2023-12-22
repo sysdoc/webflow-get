@@ -76,7 +76,10 @@ async function processSite(config) {
     // let css = await retry(() => fetchCSS(cssUrl, timestamp), RETRY_COUNT)
     // css = formatCSS(css)
     // await writePublicFile('style.css', css)
-
+    
+    // Clean folder 
+    await cleanFolder()
+    
     if (config.pages) {
         console.log('Fetching pages')
 
@@ -316,6 +319,10 @@ async function writeFile(name, content) {
 async function writePublicFile(name, content) {
     await assurePathExists(`public/${name}`)
     await writeFile(`public/${name}`, content)
+}
+
+async function cleanFolder() {
+    await fs.rmSync(`${process.env.GITHUB_WORKSPACE}/public` , { recursive: true, force: true })
 }
 
 function sleep(timeout) {
