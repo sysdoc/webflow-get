@@ -4,6 +4,7 @@ const picomatch = require('picomatch')
 const fetch = require('node-fetch')
 const prettier = require('prettier')
 const fs = require('fs').promises
+const path  = require('path');
 
 const RETRY_COUNT = 3
 const RETRY_DELAY = 10 * 1000
@@ -78,7 +79,7 @@ async function processSite(config) {
     // await writePublicFile('style.css', css)
     
     // Clean folder 
-    await cleanFolder()
+    await deleteAllFilesInDir(`${process.env.GITHUB_WORKSPACE}/public`)
     
     if (config.pages) {
         console.log('Fetching pages')
@@ -321,8 +322,18 @@ async function writePublicFile(name, content) {
     await writeFile(`public/${name}`, content)
 }
 
-async function cleanFolder() {
-    await fs.rmSync(`${process.env.GITHUB_WORKSPACE}/public` , { recursive: true, force: true })
+async function deleteAllFilesInDir(dirPath) {
+  try {
+    const files = await fs.readdir(dirPath);
+
+    const deleteFilePromises = files.map(file =>
+      fs.unlink(path.join(dirPath, file)),
+    );
+
+    await Promise.all(deleteFilePromises);
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 function sleep(timeout) {
