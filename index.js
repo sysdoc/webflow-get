@@ -67,10 +67,10 @@ async function processSite(config) {
     let index = await fetchPage(site)
     const timestamp = getTimestampFromHTML(index)
 
-    if (timestamp <= lastTimestamp) {
-        console.log('No changes since last run, skipping')
-        return
-    }
+    //if (timestamp <= lastTimestamp) {
+    //    console.log('No changes since last run, skipping')
+    //    return
+    //}
 
     // const cssUrl = getCSSURL(index)
     // let css = await retry(() => fetchCSS(cssUrl, timestamp), RETRY_COUNT)
