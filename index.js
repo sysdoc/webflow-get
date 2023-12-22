@@ -67,10 +67,10 @@ async function processSite(config) {
     let index = await fetchPage(site)
     const timestamp = getTimestampFromHTML(index)
 
-    //if (timestamp <= lastTimestamp) {
-    //    console.log('No changes since last run, skipping')
-    //    return
-    //}
+    if (timestamp <= lastTimestamp) {
+        console.log('No changes since last run, skipping')
+        return
+    }
 
     // const cssUrl = getCSSURL(index)
     // let css = await retry(() => fetchCSS(cssUrl, timestamp), RETRY_COUNT)
@@ -80,10 +80,10 @@ async function processSite(config) {
     if (config.pages) {
         console.log('Fetching pages')
 
-        if (config.pages.valid('/index')) {
-            index = formatHTML(index)
-            await writePublicFile('index.html', index)
-        }
+        //if (config.pages.valid('/index')) {
+        //    index = formatHTML(index)
+        //    await writePublicFile('index.html', index)
+        //}
 
         await getFoundPages(site, index, timestamp)
     }
@@ -109,6 +109,9 @@ async function getFoundPages(site, html, timestamp) {
     const foundURLs = collectAbsoluteURLsFromHTML(html)
     const newURLs = foundURLs.filter((url) => {
         if (visitedPages.has(url)) {
+            return false
+        }
+        if ( url.indexOf('cdn-cgi') > -1 ) {
             return false
         }
 
