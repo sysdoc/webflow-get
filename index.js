@@ -79,7 +79,8 @@ async function processSite(config) {
     // await writePublicFile('style.css', css)
     
     // Clean folder 
-    await deleteAllFilesInDir(`${process.env.GITHUB_WORKSPACE}/public`)
+    console.log('Cleaning public folder')
+    await fs.rmdir(`${process.env.GITHUB_WORKSPACE}/public`, { recursive: true } )
     
     if (config.pages) {
         console.log('Fetching pages')
@@ -234,6 +235,7 @@ function formatCSS(css) {
 
 function formatHTML(html) {
     html = prettier.format(html, { parser: 'html', printWidth: 200 })
+    html = html.replace( /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi, '' )
 
     // // Cut the timestamp line
     // const start = html.indexOf('\n') + 1
@@ -320,20 +322,6 @@ async function writeFile(name, content) {
 async function writePublicFile(name, content) {
     await assurePathExists(`public/${name}`)
     await writeFile(`public/${name}`, content)
-}
-
-async function deleteAllFilesInDir(dirPath) {
-  try {
-    const files = await fs.readdir(dirPath);
-
-    const deleteFilePromises = files.map(file =>
-      fs.unlink(path.join(dirPath, file)),
-    );
-
-    await Promise.all(deleteFilePromises);
-  } catch (err) {
-    console.log(err);
-  }
 }
 
 function sleep(timeout) {
