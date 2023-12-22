@@ -80,7 +80,7 @@ async function processSite(config) {
     
     // Clean folder 
     console.log('Cleaning public folder')
-    await fs.rmdir(`${process.env.GITHUB_WORKSPACE}/public`, { recursive: true } )
+    await fs.rm(`${process.env.GITHUB_WORKSPACE}/public`, { recursive: true } )
     
     if (config.pages) {
         console.log('Fetching pages')
@@ -124,7 +124,7 @@ async function getFoundPages(site, html, timestamp) {
         return true
     })
 
-    return await Promise.all(newURLs.map(page => getPage(site, page, timestamp)))
+    return await Promise.all(newURLs.map(page => getPage(site, page.replace(/\/$/,''), timestamp)))
 }
 
 async function fetchPage(url, expectedTimestamp = null) {
