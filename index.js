@@ -237,13 +237,14 @@ function formatHTML(html) {
     html = prettier.format(html, { parser: 'html', printWidth: 200 })
     html = html.replace( /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi, '' )
 
-    // // Cut the timestamp line
+    // Cut the timestamp line and other comments
+    html = html.replace( /<!-- Last Published[^>]*-->/gi, '' )
     // const start = html.indexOf('\n') + 1
     // const end = html.indexOf('\n', start) + 1
     // html = html.substring(0, start) + html.substring(end)
 
-    // // Remove the style hash
-    // html = html.replace(CSS_REPLACE_REGEX, './style.css')
+    // Remove the style hash
+    html = html.replace(CSS_REPLACE_REGEX, './style.css')
 
     return html
 }
