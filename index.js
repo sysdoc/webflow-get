@@ -1,256 +1,272 @@
-const core = require('@actions/core')
-const YAML = require('yaml')
-const picomatch = require('picomatch')
-const fetch = require('node-fetch')
-const prettier = require('prettier')
-const fs = require('fs').promises
-const path  = require('path');
+const core = require("@actions/core");
+const cheerio = require("cheerio");
+const YAML = require("yaml");
+const picomatch = require("picomatch");
+const fetch = require("node-fetch");
+const prettier = require("prettier");
+const fs = require("fs").promises;
+const path = require("path");
 
-const RETRY_COUNT = 3
-const RETRY_DELAY = 10 * 1000
+const RETRY_COUNT = 3;
+const RETRY_DELAY = 10 * 1000;
 
-const CSS_PATTERN = '.*(?:(?:\\/.*\\.webflow)|(?:website-files.com.*))\\.[a-z0-9]+(?:\\.min)?\\.css'
-const CSS_REGEX = new RegExp(`<link href="(${CSS_PATTERN})".*\\/>`)
-const CSS_REPLACE_REGEX = new RegExp(`(?<=<link href=")(${CSS_PATTERN})(?=".*\\/>)`)
+const CSS_PATTERN =
+  ".*(?:(?:\\/.*\\.webflow)|(?:website-files.com.*))\\.[a-z0-9]+(?:\\.min)?\\.css";
+const CSS_REGEX = new RegExp(`<link href="(${CSS_PATTERN})".*\\/>`);
+const CSS_REPLACE_REGEX = new RegExp(
+  `(?<=<link href=")(${CSS_PATTERN})(?=".*\\/>)`
+);
 
-const visitedPages = new Set()
-const alreadyCreatedPaths = new Set()
+const visitedPages = new Set();
+const alreadyCreatedPaths = new Set();
 
 class RetryError extends Error {
-    constructor() {
-        super('Retrying resource')
-        this.name = 'RetryError'
-    }
+  constructor() {
+    super("Retrying resource");
+    this.name = "RetryError";
+  }
 }
 
 class RetryAllError extends Error {
-    constructor() {
-        super('Retrying site')
-        this.name = 'RetryAllError'
-    }
+  constructor() {
+    super("Retrying site");
+    this.name = "RetryAllError";
+  }
 }
 
 function getInputBoolean(name) {
-    const input = core.getInput(name)
-    return input && !(['0', 'false', 'no', 'off'].includes(input))
+  const input = core.getInput(name);
+  return input && !["0", "false", "no", "off"].includes(input);
 }
 
 async function init() {
-    const repositoryName = process.env.GITHUB_REPOSITORY.replace(/^[^/]*\//, '')
+  const repositoryName = process.env.GITHUB_REPOSITORY.replace(/^[^/]*\//, "");
 
-    const config = {
-        site: repositoryName.includes('.') ? `https://${repositoryName}` : '',
-        pages: true
-    }
+  const config = {
+    site: repositoryName.includes(".") ? `https://${repositoryName}` : "",
+    pages: true,
+  };
 
-    const configFile = await readFile('webflowgit.yml')
-    Object.assign(config, YAML.parse(configFile))
+  const configFile = await readFile("webflowgit.yml");
+  Object.assign(config, YAML.parse(configFile));
 
-    if (config.pages) {
-        const ignorePage = picomatch(config.pages.ignore || [])
-        config.pages = {
-            valid: page => !ignorePage(page)
-        }
-    }
+  if (config.pages) {
+    const ignorePage = picomatch(config.pages.ignore || []);
+    config.pages = {
+      valid: (page) => !ignorePage(page),
+    };
+  }
 
-    config.force = getInputBoolean('force')
+  config.force = getInputBoolean("force");
 
-    return config
+  return config;
 }
 
 async function processSite(config) {
-    const site = config.site
+  const site = config.site;
 
-    console.log(`Processing site ${site}`)
+  console.log(`Processing site ${site}`);
 
-    const lastTimestamp = await getLastTimestamp(config)
+  const lastTimestamp = await getLastTimestamp(config);
 
-    let index = await fetchPage(site)
-    const timestamp = getTimestampFromHTML(index)
+  let index = await fetchPage(site);
+  const timestamp = getTimestampFromHTML(index);
 
-    if (!config.force && timestamp <= lastTimestamp) {
-        console.log('No changes since last run, skipping')
-        return
-    }
+  if (!config.force && timestamp <= lastTimestamp) {
+    console.log("No changes since last run, skipping");
+    return;
+  }
 
-    // const cssUrl = getCSSURL(index)
-    // let css = await retry(() => fetchCSS(cssUrl, timestamp), RETRY_COUNT)
-    // css = formatCSS(css)
-    // await writePublicFile('style.css', css)
-    
-    // Clean folder 
-    console.log('Cleaning public folder')
-    await fs.rm(`${process.env.GITHUB_WORKSPACE}/public`, { recursive: true } )
-    
-    if (config.pages) {
-        console.log('Fetching pages')
+  // const cssUrl = getCSSURL(index)
+  // let css = await retry(() => fetchCSS(cssUrl, timestamp), RETRY_COUNT)
+  // css = formatCSS(css)
+  // await writePublicFile('style.css', css)
 
-        //if (config.pages.valid('/index')) {
-        //    index = formatHTML(index)
-        //    await writePublicFile('index.html', index)
-        //}
+  // Clean folder
+  console.log("Cleaning public folder");
+  await fs.rm(`${process.env.GITHUB_WORKSPACE}/public`, { recursive: true });
 
-        await getFoundPages(site, index, timestamp)
-    }
+  if (config.pages) {
+    console.log("Fetching pages");
 
-    writeFile('.timestamp', timestamp)
+    //if (config.pages.valid('/index')) {
+    //    index = formatHTML(index)
+    //    await writePublicFile('index.html', index)
+    //}
+
+    await getFoundPages(site, index, timestamp);
+  }
+
+  writeFile(".timestamp", timestamp);
 }
 
 async function getPage(site, page, timestamp) {
-    try {
-        let html = await retry(() => {
-            console.log(`Fetching ${page}`)
-            return fetchPage(`${site}${page}`, timestamp)
-        }, RETRY_COUNT)
-        await getFoundPages(site, html, timestamp)
-        html = formatHTML(html)
-        await writePublicFile(`${page}.html`, html)
-    } catch (error) {
-        console.error(`${error.message}: ${page}`)
-    }
+  try {
+    let html = await retry(() => {
+      console.log(`Fetching ${page}`);
+      return fetchPage(`${site}${page}`, timestamp);
+    }, RETRY_COUNT);
+    await getFoundPages(site, html, timestamp);
+    html = formatHTML(html);
+    await writePublicFile(`${page}.html`, html);
+  } catch (error) {
+    console.error(`${error.message}: ${page}`);
+  }
 }
 
 async function getFoundPages(site, html, timestamp) {
-    const foundURLs = collectAbsoluteURLsFromHTML(html)
-    const newURLs = foundURLs.filter((url) => {
-        if (visitedPages.has(url)) {
-            return false
-        }
-        if ( url.indexOf('cdn-cgi') > -1 ) {
-            return false
-        }
+  const foundURLs = collectAbsoluteURLsFromHTML(html);
+  const newURLs = foundURLs.filter((url) => {
+    if (visitedPages.has(url)) {
+      return false;
+    }
+    if (url.indexOf("cdn-cgi") > -1) {
+      return false;
+    }
 
-        visitedPages.add(url)
-        return true
-    })
+    visitedPages.add(url);
+    return true;
+  });
 
-    return await Promise.all(newURLs.map(page => getPage(site, page.replace(/\/$/,''), timestamp)))
+  return await Promise.all(
+    newURLs.map((page) => getPage(site, page.replace(/\/$/, ""), timestamp))
+  );
 }
 
 async function fetchPage(url, expectedTimestamp = null) {
-    const response = await fetch(url)
+  const response = await fetch(url);
 
-    if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`)
-    }
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
 
-    const body = await response.text()
+  const body = await response.text();
 
-    const timestamp = getTimestampFromHTML(body)
-    checkTimestamp(timestamp, expectedTimestamp)
+  const timestamp = getTimestampFromHTML(body);
+  checkTimestamp(timestamp, expectedTimestamp);
 
-    return body
+  return body;
 }
 
 function getCSSURL(index) {
-    const cssMatch = index.match(CSS_REGEX)
+  const cssMatch = index.match(CSS_REGEX);
 
-    if (!cssMatch) {
-        throw new Error('CSS file not found')
-    }
+  if (!cssMatch) {
+    throw new Error("CSS file not found");
+  }
 
-    const cssURL = cssMatch[1]
-    return cssURL
+  const cssURL = cssMatch[1];
+  return cssURL;
 }
 
 async function fetchCSS(url, expectedTimestamp = null) {
-    const response = await fetch(url)
+  const response = await fetch(url);
 
-    if (!response.ok) {
-        throw new Error(`${response.status}: ${response.statusText}`)
-    }
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
 
-    const css = await response.text()
+  const css = await response.text();
 
-    const timestamp = getTimestampFromCSS(css)
-    checkTimestamp(timestamp, expectedTimestamp)
+  const timestamp = getTimestampFromCSS(css);
+  checkTimestamp(timestamp, expectedTimestamp);
 
-    return css
+  return css;
 }
 
 function collectAbsoluteURLsFromHTML(html) {
-    return [...html.matchAll(/"\/+([^"\.\s]*)"|'\/+([^'\.\s]*)'/g)].map(match => match[1] || match[2]).filter(url => url)
+  return [...html.matchAll(/"\/+([^"\.\s]*)"|'\/+([^'\.\s]*)'/g)]
+    .map((match) => match[1] || match[2])
+    .filter((url) => url);
 }
 
 async function fetchSitemap(site) {
-    const response = await fetch(`${site}/sitemap.xml`)
+  const response = await fetch(`${site}/sitemap.xml`);
 
-    if (!response.ok) {
-        if (response.status === 404) {
-            return null
-        }
-        throw new Error(`${response.status}: ${response.statusText}`)
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
     }
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
 
-    const sitemap = await response.text()
-    return sitemap
+  const sitemap = await response.text();
+  return sitemap;
 }
 
 function getPages(site) {
-    let pages = [...sitemap.matchAll(/<loc>(.*)<\/loc>/g)]
+  let pages = [...sitemap.matchAll(/<loc>(.*)<\/loc>/g)];
 
-    pages = pages.map(m => m[1])
-        .map(url => url.substring(site.length).replace(/^\/|\/$/g, ''))
-        .filter(page => page)
+  pages = pages
+    .map((m) => m[1])
+    .map((url) => url.substring(site.length).replace(/^\/|\/$/g, ""))
+    .filter((page) => page);
 
-    return pages
+  return pages;
 }
 
 async function getLastTimestamp(config) {
-    if (config.force || !(await pathExists('.timestamp'))) {
-        return '1970-01-01T00:00:00Z'
-    }
+  if (config.force || !(await pathExists(".timestamp"))) {
+    return "1970-01-01T00:00:00Z";
+  }
 
-    const timestamp = await readFile('.timestamp')
-    return timestamp.trim()
+  const timestamp = await readFile(".timestamp");
+  return timestamp.trim();
 }
 
 function getTimestampFromCSS(css) {
-    const timestampMatch = css.match(/\/* Generated on: ([^(]+) \(/)
-    if (!timestampMatch) {
-        console.warn('Missing CSS timestamp, ignoring timestamp check')
-        return null
-    }
-    const timestamp = timestampMatch[1]
-    return new Date(timestamp).toISOString()
+  const timestampMatch = css.match(/\/* Generated on: ([^(]+) \(/);
+  if (!timestampMatch) {
+    console.warn("Missing CSS timestamp, ignoring timestamp check");
+    return null;
+  }
+  const timestamp = timestampMatch[1];
+  return new Date(timestamp).toISOString();
 }
 
 function getTimestampFromHTML(html) {
-    const timestampMatch = html.match(/<!-- Last Published: ([^(]+) \(/)
-    if (!timestampMatch) {
-        throw new Error('HTML timestamp not found')
-    }
-    const timestamp = timestampMatch[1]
-    return new Date(timestamp).toISOString()
+  const timestampMatch = html.match(/<!-- Last Published: ([^(]+) \(/);
+  if (!timestampMatch) {
+    throw new Error("HTML timestamp not found");
+  }
+  const timestamp = timestampMatch[1];
+  return new Date(timestamp).toISOString();
 }
 
 function formatCSS(css) {
-    css = prettier.format(css, { parser: 'css' })
+  css = prettier.format(css, { parser: "css" });
 
-    // Cut the timestamp line
-    css = css.substring(css.indexOf('\n') + 1)
+  // Cut the timestamp line
+  css = css.substring(css.indexOf("\n") + 1);
 
-    return css
+  return css;
 }
 
 function formatHTML(html) {
-    html = prettier.format(html, { parser: 'html', printWidth: 200 })
-    html = html.replace( /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi, '' )
+  html = prettier.format(html, { parser: "html", printWidth: 200 });
+  html = html.replace(
+    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi,
+    ""
+  );
 
-    // Cut the timestamp line and other comments
-    html = html.replace( /<!-- Last Published[^>]*-->/gi, '' )
-    // const start = html.indexOf('\n') + 1
-    // const end = html.indexOf('\n', start) + 1
-    // html = html.substring(0, start) + html.substring(end)
+  // Cut the timestamp line and other comments
+  html = html.replace(/<!-- Last Published[^>]*-->/gi, "");
+  // const start = html.indexOf('\n') + 1
+  // const end = html.indexOf('\n', start) + 1
+  // html = html.substring(0, start) + html.substring(end)
 
-    // Remove the style hash
-    html = html.replace(CSS_REPLACE_REGEX, './style.css')
+  // Remove the style hash
+  html = html.replace(CSS_REPLACE_REGEX, "./style.css");
 
-    return html
+  // Remove dynamics sections
+  const $ = cheerio.load(html);
+  $(".w-dyn-item").remove();
+
+  return $.html();
 }
 
 function checkTimestamp(timestamp, expectedTimestamp) {
-    /*  if (timestamp && expectedTimestamp) {
+  /*  if (timestamp && expectedTimestamp) {
         if (timestamp < expectedTimestamp) {
           console.log('Retrying resource')
           throw new RetryError()
@@ -261,90 +277,100 @@ function checkTimestamp(timestamp, expectedTimestamp) {
       }*/
 }
 
-async function retry(func, retryCount = 0, errorType = RetryError, delay = RETRY_DELAY) {
-    try {
-        return await func()
-    } catch (error) {
-        if (error instanceof errorType) {
-            if (retryCount > 0) {
-                await sleep(delay)
-                return retry(func, retryCount - 1, errorType, delay)
-            } else {
-                throw new Error('Too many retries, aborting')
-            }
-        }
-
-        throw error
+async function retry(
+  func,
+  retryCount = 0,
+  errorType = RetryError,
+  delay = RETRY_DELAY
+) {
+  try {
+    return await func();
+  } catch (error) {
+    if (error instanceof errorType) {
+      if (retryCount > 0) {
+        await sleep(delay);
+        return retry(func, retryCount - 1, errorType, delay);
+      } else {
+        throw new Error("Too many retries, aborting");
+      }
     }
+
+    throw error;
+  }
 }
 
 async function assurePathExists(path) {
-    let parts = path.split('/').filter(part => part)
-    parts = parts.slice(0, parts.length - 1)
+  let parts = path.split("/").filter((part) => part);
+  parts = parts.slice(0, parts.length - 1);
 
-    let current = ''
+  let current = "";
 
-    for (const part of parts) {
-        current += `/${part}`
-        if (!alreadyCreatedPaths.has(current) && !(await pathExists(current))) {
-            if (!alreadyCreatedPaths.has(current)) {
-//                try {
-                    await fs.mkdir(`${process.env.GITHUB_WORKSPACE}${current}`)
-                    alreadyCreatedPaths.add(current)
-//                } catch (error) {
-//                    
-//                }
-            }
-        }
+  for (const part of parts) {
+    current += `/${part}`;
+    if (!alreadyCreatedPaths.has(current) && !(await pathExists(current))) {
+      if (!alreadyCreatedPaths.has(current)) {
+        //                try {
+        await fs.mkdir(`${process.env.GITHUB_WORKSPACE}${current}`);
+        alreadyCreatedPaths.add(current);
+        //                } catch (error) {
+        //
+        //                }
+      }
     }
+  }
 }
 
 async function pathExists(path) {
-    if (path.startsWith('/')) {
-        path = path.substring(1)
-    }
+  if (path.startsWith("/")) {
+    path = path.substring(1);
+  }
 
-    try {
-        await fs.access(`${process.env.GITHUB_WORKSPACE}/${path}`)
-        return true
-    } catch (error) {
-        return false
-    }
+  try {
+    await fs.access(`${process.env.GITHUB_WORKSPACE}/${path}`);
+    return true;
+  } catch (error) {
+    return false;
+  }
 }
 
 async function readFile(name) {
-    return await fs.readFile(`${process.env.GITHUB_WORKSPACE}/${name}`, 'utf8')
+  return await fs.readFile(`${process.env.GITHUB_WORKSPACE}/${name}`, "utf8");
 }
 
 async function writeFile(name, content) {
-    await fs.writeFile(`${process.env.GITHUB_WORKSPACE}/${name}`, content)
+  await fs.writeFile(`${process.env.GITHUB_WORKSPACE}/${name}`, content);
 }
 
 async function writePublicFile(name, content) {
-    await assurePathExists(`public/${name}`)
-    await writeFile(`public/${name}`, content)
+  await assurePathExists(`public/${name}`);
+  await writeFile(`public/${name}`, content);
 }
 
 function sleep(timeout) {
-    return new Promise(resolve => setTimeout(resolve, timeout))
+  return new Promise((resolve) => setTimeout(resolve, timeout));
 }
 
 async function main() {
-    const config = await init()
+  const config = await init();
 
-    if (!config.site) {
-        console.log('Missing site, skipping')
-        return
-    }
+  if (!config.site) {
+    console.log("Missing site, skipping");
+    return;
+  }
 
-    await retry(() => processSite(config), RETRY_COUNT, RetryAllError, RETRY_DELAY * 2)
+  await retry(
+    () => processSite(config),
+    RETRY_COUNT,
+    RetryAllError,
+    RETRY_DELAY * 2
+  );
 }
 
 main()
-    .then(() => {
-        console.log('Executed successfully')
-    })
-    .catch((error) => {
-        console.error(error)
-        core.setFailed(error.message)
-    })
+  .then(() => {
+    console.log("Executed successfully");
+  })
+  .catch((error) => {
+    console.error(error);
+    core.setFailed(error.message);
+  });
