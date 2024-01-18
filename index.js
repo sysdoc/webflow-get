@@ -247,6 +247,11 @@ function formatCSS(css) {
 }
 
 function formatHTML(html) {
+  // Remove dynamics sections
+  const $ = cheerio.load(html);
+  $(".w-dyn-item").remove();
+  html = $.html();
+
   html = prettier.format(html, { parser: "html", printWidth: 200 });
   html = html.replace(
     /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script\s*>/gi,
@@ -262,11 +267,7 @@ function formatHTML(html) {
   // Remove the style hash
   html = html.replace(CSS_REPLACE_REGEX, "./style.css");
 
-  // Remove dynamics sections
-  const $ = cheerio.load(html);
-  $(".w-dyn-item").remove();
-
-  return $.html();
+  return html;
 }
 
 function checkTimestamp(timestamp, expectedTimestamp) {
