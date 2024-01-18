@@ -47,8 +47,12 @@ async function init() {
     pages: true,
   };
 
-  const configFile = await readFile("webflowgit.yml");
-  Object.assign(config, YAML.parse(configFile));
+  try {
+    const configFile = await readFile("webflowgit.yml");
+    Object.assign(config, YAML.parse(configFile));
+  } catch (error) {
+    console.log("Unable to load config file");
+  }
 
   if (config.pages) {
     const ignorePage = picomatch(config.pages.ignore || []);
