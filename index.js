@@ -224,7 +224,7 @@ function getTimestampFromCSS(css) {
     console.warn("Missing CSS timestamp, ignoring timestamp check");
     return null;
   }
-  const timestamp = timestampMatch[1];
+  const timestamp = timestampMatch ? timestampMatch[1] : null;
   return new Date(timestamp).toISOString();
 }
 
@@ -233,7 +233,7 @@ function getTimestampFromHTML(html) {
   if (!timestampMatch) {
     console.warn("HTML timestamp not found");
   }
-  const timestamp = timestampMatch[1];
+  const timestamp = timestampMatch ? timestampMatch[1] : null;
   return new Date(timestamp).toISOString();
 }
 
