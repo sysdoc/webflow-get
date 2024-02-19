@@ -231,7 +231,7 @@ function getTimestampFromCSS(css) {
 function getTimestampFromHTML(html) {
   const timestampMatch = html.match(/<!-- Last Published: ([^(]+) \(/);
   if (!timestampMatch) {
-    throw new Error("HTML timestamp not found");
+    console.warn("HTML timestamp not found");
   }
   const timestamp = timestampMatch[1];
   return new Date(timestamp).toISOString();
