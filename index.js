@@ -69,12 +69,14 @@ async function init() {
 async function processSite(config) {
   const site = config.site;
 
-  console.log(`Processing site ${site}`);
+  console.log(`Processing site ${site}, force update: ${config.force}`);
 
   const lastTimestamp = await getLastTimestamp(config);
+  console.log(`Last run timestamp ${lastTimestamp}`);
 
   let index = await fetchPage(site);
   const timestamp = getTimestampFromHTML(index);
+  console.log(`Last published timestamp ${timestamp}`);
 
   if (!config.force && timestamp <= lastTimestamp) {
     console.log("No changes since last run, skipping");
